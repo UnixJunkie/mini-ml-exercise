@@ -5,7 +5,7 @@ open Printf
 
 type const = True | False | Int of int
 
-type var = (*Name of*) string
+type var = string
 
 type bin_op = Plus | Minus | Mult | Div | And | Or
 
@@ -18,9 +18,6 @@ type expr =
   | Apply of expr * expr
   | Fun of (var * expr) (* fonction definition *)
   | Let of (var * expr * expr) (* bind a variable into an expression *)
-(*
-  | Let_rec of (string * var * expr * expr)
-*)
 
 (* printers *)
 
@@ -52,8 +49,3 @@ let rec string_of_expr = function
   | Let (v, init, in_expr) ->
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
-(*
-  | Let_rec (fun_name, var, init, in_expr) ->
-    "let rec " ^ fun_name ^ " " ^ (string_of_var var) ^ " = " ^
-    (string_of_expr init) ^ " in " ^ (string_of_expr in_expr)
-*)
