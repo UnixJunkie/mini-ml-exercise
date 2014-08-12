@@ -10,6 +10,6 @@ type expr =
   | Var of var
   | Bin_op of expr * bin_op * expr
   | Apply of expr * expr
-  (* | Fun of (var -> expr) *)
-  (* | Let of (var * expr -> expr) *)
-  (* | Let_rec_in of (fun_name * var * expr -> expr) *)
+  | Fun of (var -> expr)
+  | Let of (var * expr * expr) (* bind a variable into an expression *)
+  | Let_rec of (string * var * expr * expr)
