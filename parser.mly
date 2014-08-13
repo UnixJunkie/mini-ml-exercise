@@ -4,6 +4,7 @@ open Ast
 
 %token TRUE FALSE
 %token <int> INT
+%token <string> VAR
 %token PLUS MINUS MULT DIV AND OR
 %token LPAREN RPAREN
 %left OR         /* lowest precedence */
@@ -19,6 +20,7 @@ main:
 ;
 expr:
   | INT                { Const (Int $1) }
+  | VAR                { Var $1 }
   | TRUE               { Const True }
   | FALSE              { Const False }
   | TRUE OR expr       { Const True }
