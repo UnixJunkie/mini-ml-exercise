@@ -5,7 +5,6 @@ exception Eof
 rule token = parse
   | [' ' '\t' '\n']   { token lexbuf } (* skip blanks *)
   | ['0'-'9']+ as lxm { INT(int_of_string lxm) }
-  | ['a'-'Z']+ as lxm { VAR lxm }
   | "True"            { TRUE }
   | "False"           { FALSE }
   | "->"              { ARROW }
@@ -14,6 +13,7 @@ rule token = parse
   | "||"              { OR }
   | "&&"              { AND }
   | "in"              { IN }
+  | ['a'-'z']+ as lxm { VAR lxm }
   | '='               { EQUAL }
   | '+'               { PLUS }
   | '-'               { MINUS }
