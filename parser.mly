@@ -2,6 +2,8 @@
 open Ast
 %}
 
+%token LET EQUAL IN
+%token FUN ARROW
 %token TRUE FALSE EOF
 %token <int> INT
 %token <string> VAR
@@ -16,6 +18,9 @@ main:
 ;
 
 expr3:
+  | LET VAR EQUAL expr3 IN expr3 { Let ($2, $4, $6) }
+  | FUN VAR ARROW expr3 { Fun ($2, $4) }
+  | expr3 expr3         { Apply ($1, $2) }
   | expr3 OR expr2      { Bin_op ($1, Or, $3) }
   | expr3 AND expr2     { Bin_op ($1, And, $3) }
   | expr2               { $1 }
