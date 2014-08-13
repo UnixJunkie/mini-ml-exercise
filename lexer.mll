@@ -8,8 +8,13 @@ rule token = parse
   | ['a'-'Z']+ as lxm { VAR lxm }
   | "True"            { TRUE }
   | "False"           { FALSE }
+  | "->"              { ARROW }
+  | "let"             { LET }
+  | "fun"             { FUN }
   | "||"              { OR }
   | "&&"              { AND }
+  | "in"              { IN }
+  | '='               { EQUAL }
   | '+'               { PLUS }
   | '-'               { MINUS }
   | '*'               { MULT }
