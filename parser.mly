@@ -22,7 +22,11 @@ expr3:
   | FUN VAR ARROW expr3 { Fun ($2, $4) }
   | expr3 expr3         { Apply ($1, $2) }
   | expr3 OR expr2      { Bin_op ($1, Or, $3) }
+  | expr3 OR TRUE       { Const True }
+  | expr3 OR FALSE      { $1 }
   | expr3 AND expr2     { Bin_op ($1, And, $3) }
+  | expr3 AND TRUE      { $1 }
+  | expr3 AND FALSE     { Const False }
   | expr2               { $1 }
 
 expr2:
