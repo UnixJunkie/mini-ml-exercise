@@ -1,10 +1,10 @@
 
 all:
-	ocamlyacc parser.mly
-	# ocamlc -c ast.ml
-	# ocamlc -c parser.mli
-	# ocamlc -c parser.ml
-
+	ocamllex lexer.mll       # generates lexer.ml
+	ocamlyacc parser.mly     # generates parser.ml and parser.mli
+	ocamlc -c parser.mli
+	ocamlc -c lexer.ml
+	ocamlc -c parser.ml
 
 clean:
-	\rm *.mli *.cmi *.cmo ast parser
+	\rm -f *.mli *.cmi *.cmo ast parser parser.ml
