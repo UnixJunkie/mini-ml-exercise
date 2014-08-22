@@ -1,6 +1,8 @@
 
 open Printf
 
+module L = List
+
 (* basic types *)
 
 type const = True | False | Int of int
@@ -64,20 +66,16 @@ let rec string_of_expr (e: expr) = match e with
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
 
-(* map from variables names to their De Bruijn index *)
-module VarMap = Map.Make(String)
+type dbi_var = var * int
 
-let add_or_fail map v =
-  failwith "not implemented yet"
+let add_var (v: var) (l: dbi_var list) =
+  (v, 0) ::
+  (L.map
+     (fun (v', i) -> (v', i + 1))
+     l)
 
-let rec compute_db_indexes (e: expr): db_expr = match e with
-  | Const cst -> DB_const cst
-  | Var v -> failwith "not implemented yet"
-  | Bin_op (e1, op, e2) ->
-    DB_bin_op (compute_db_indexes e1, op, compute_db_indexes e2)
-  | Apply (e1, e2) ->
-    DB_apply (compute_db_indexes e1, compute_db_indexes e2)
-  | Fun (v, e) ->
+let dbi_indexes e =
+  let loop (seen: dbi_var list) (e: expr): (dbi_var list) =
     failwith "not implemented yet"
-  | Let (v, e1, e2) ->
-    failwith "not implemented yet"
+  in
+  loop [] e
