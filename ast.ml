@@ -9,7 +9,7 @@ type const = True | False | Int of int
 
 type var = string
 
-(* var with its De Bruijn index *)
+(* variable with its De Bruijn index *)
 type db_var = string * int
 
 type bin_op = Plus | Minus | Mult | Div | And | Or
@@ -27,7 +27,7 @@ type expr =
 (* expr with db_var instead of var *)
 type db_expr =
   | DB_const of const
-  | DB_var of db_var
+  | DB_var of var * int
   | DB_bin_op of db_expr * bin_op * db_expr
   | DB_apply of db_expr * db_expr
   | DB_fun of (db_var * db_expr)
@@ -66,16 +66,37 @@ let rec string_of_expr (e: expr) = match e with
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
 
-type dbi_var = var * int
+(* return the DBI of var v *)
+let rec find_dbi (v: var) (vars: db_var list) = match vars with
+  | [] -> -1 (* a free variable *)
+  | (u, i) :: rest ->
+    if u = v then i
+    else find_dbi v rest
 
-let add_var (v: var) (l: dbi_var list) =
+(* add a new variable into the DBI vars list *)
+let add_dbi (v: var) (vars: db_var list) =
   (v, 0) ::
-  (L.map
-     (fun (v', i) -> (v', i + 1))
-     l)
+  L.map
+    (fun (v', i) -> (v', i + 1))
+    vars
 
-let dbi_indexes e =
-  let loop (seen: dbi_var list) (e: expr): (dbi_var list) =
-    failwith "not implemented yet"
-  in
-  loop [] e
+(* transform an expression into an expression with De Bruijn indexes
+   let x = "a" in x -> 0
+   let x = "a" in (let y = "b" in x * y) -> 1 * 0
+*)
+let rec dbi_indexes (vars: db_var list) (e: expr): db_expr = match e with
+  | Const c -> DB_const c
+  | Var v -> DB_var (v, find_dbi v vars)
+  | Bin_op (e1, op, e2) -> DB_bin_op (dbi_indexes vars e1,
+                                      op,
+                                      dbi_indexes vars e2)
+  | Apply (e1, e2) -> DB_apply (dbi_indexes vars e1,
+                                dbi_indexes vars e2)
+  | Fun (v, e) -> let new_vars = add_dbi v vars in
+                  DB_fun ((v, 0),
+                          dbi_indexes new_vars e)
+  | Let (v, init_expr, in_expr) ->
+    let new_vars = add_dbi v vars in
+    DB_let ((v, 0),
+            dbi_indexes vars init_expr,
+            dbi_indexes new_vars in_expr)
