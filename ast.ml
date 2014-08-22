@@ -1,7 +1,6 @@
 
-open Printf
-
 module L = List
+module P = Printf
 
 (* basic types *)
 
@@ -27,7 +26,7 @@ type expr =
 (* expr with db_var instead of var *)
 type db_expr =
   | DB_const of const
-  | DB_var of var * int
+  | DB_var of db_var
   | DB_bin_op of db_expr * bin_op * db_expr
   | DB_apply of db_expr * db_expr
   | DB_fun of (db_var * db_expr)
@@ -100,3 +99,15 @@ let rec dbi_indexes (vars: db_var list) (e: expr): db_expr = match e with
     DB_let ((v, 0),
             dbi_indexes vars init_expr,
             dbi_indexes new_vars in_expr)
+
+let rec string_of_db_expr (e: db_expr) = match e with
+  | DB_const c -> string_of_const c
+  | DB_var (v, i) -> P.sprintf "(%s, %d)" v i
+  | DB_bin_op (e1, op, e2) ->
+    (string_of_db_expr e1) ^ " " ^ (string_of_bin_op op) ^ " " ^ (string_of_db_expr e2)
+  | DB_apply (e1, e2) -> (string_of_db_expr e1) ^ " " ^ (string_of_db_expr e2)
+  | DB_fun (v, e) -> "fun " ^ (string_of_db_expr (DB_var v)) ^ " -> " ^ (string_of_db_expr e)
+  | DB_let (v, init_expr, in_expr) ->
+    "let " ^ (string_of_db_expr (DB_var v)) ^
+    " = "  ^ (string_of_db_expr init_expr) ^
+    " in " ^ (string_of_db_expr in_expr)
