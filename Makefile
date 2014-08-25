@@ -10,4 +10,4 @@ all:
 	ocamlc -o test lexer.cmo parser.cmo ast.cmo main.cmo
 
 clean:
-	\rm -f *.mli *.cmi *.cmo test lexer.ml parser.ml
+	\rm -f *.mli *.cmi *.cmo *.annot test lexer.ml parser.ml
