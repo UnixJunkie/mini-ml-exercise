@@ -39,6 +39,10 @@ let string_of_const = function
   | False -> "False"
   | Int i -> string_of_int i
 
+let const_of_bool = function
+  | false -> False
+  | true -> True
+
 (* let string_of_var (name, index) = *)
 (*   Printf.sprintf "%s_%d" name index *)
 let string_of_var name =
@@ -138,7 +142,23 @@ let type_const = function
   | False -> CT_bool false
   | Int i -> CT_int i
 
-(* let apply op e1 e2  *)
+let apply op e1 e2 = match (type_const e1, type_const e2) with
+  | (CT_bool b1, CT_bool b2) ->
+    (match op with
+     | And -> Val_const (const_of_bool (b1 && b2))
+     | Or  -> Val_const (const_of_bool (b1 || b2))
+     | _ -> failwith (P.sprintf "%s applied on booleans" (string_of_bin_op op))
+    )
+  | (CT_int   _, CT_bool _) -> failwith "type mismatch: int with bool"
+  | (CT_bool  _, CT_int  _) -> failwith "type mismatch: bool with int"
+  | (CT_int  i1, CT_int i2) ->
+    (match op with
+     | Plus -> Val_const (Int (i1 + i2))
+     | Minus -> Val_const (Int (i1 - i2))
+     | Mult -> Val_const (Int (i1 * i2))
+     | Div -> Val_const (Int (i1 / i2))
+     | _ -> failwith (P.sprintf "%s applied on integers" (string_of_bin_op op))
+    )
 
 (* let interpret (ex: expr): value = *)
 (*   let rec loop (s: state) (e: db_expr): value = *)
