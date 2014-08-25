@@ -116,4 +116,49 @@ type value =
   | Val_const of const
   | Val_fun of var * expr
 
+(* program state *)
 type state = value list
+
+(* retrieve variable at index 'i' in 'state' *)
+let rec lookup i state =
+  if i < 0 then failwith (P.sprintf "lookup %d" i);
+  match state with
+  | [] -> failwith (P.sprintf "lookup %d []" i)
+  | s :: ss ->
+    if i = 0 then s
+    else lookup (i - 1) ss
+
+(* supported types in constants *)
+type const_type =
+  | CT_bool of bool
+  | CT_int of int
+
+let type_const = function
+  | True -> CT_bool true
+  | False -> CT_bool false
+  | Int i -> CT_int i
+
+(* let apply op e1 e2  *)
+
+(* let interpret (ex: expr): value = *)
+(*   let rec loop (s: state) (e: db_expr): value = *)
+(*     | DB_const c -> Val_const c *)
+(*     | DB_var (_v, i) -> lookup i state *)
+(*     | DB_bin_op (e1, op, e2) -> *)
+(*       let v1 = loop s e1 in *)
+(*       let v2 = loop s e2 in *)
+(*       match op with *)
+(*       | Plus *)
+(*       | Minus *)
+(*       | Mult *)
+(*       | Div *)
+(*       | And *)
+(*       | Or *)
+(*     | DB_apply (e1, e2) -> (string_of_db_expr e1) ^ " " ^ (string_of_db_expr e2) *)
+(*     | DB_fun (v, e) -> "fun " ^ (string_of_db_expr (DB_var v)) ^ " -> " ^ (string_of_db_expr e) *)
+(*     | DB_let (v, init_expr, in_expr) -> *)
+(*       "let " ^ (string_of_db_expr (DB_var v)) ^ *)
+(*       " = "  ^ (string_of_db_expr init_expr) ^ *)
+(*       " in " ^ (string_of_db_expr in_expr) *)
+(*   in *)
+(*   loop [] (dbi_indexes [] ex) *)
