@@ -27,16 +27,19 @@ expr3:
   | expr3 AND expr2     { Bin_op ($1, And, $3) }
   | expr3 AND TRUE      { $1 }
   | expr3 AND FALSE     { Const False }
+  | LPAREN expr3 RPAREN { $2 }
   | expr2               { $1 }
 
 expr2:
   | expr2 PLUS expr1    { Bin_op ($1, Plus, $3) }
   | expr2 MINUS expr1   { Bin_op ($1, Minus, $3) }
+  | LPAREN expr2 RPAREN { $2 }
   | expr1               { $1 }
 
 expr1:
   | expr1 MULT expr0    { Bin_op ($1, Mult, $3) }
   | expr1 DIV expr0     { Bin_op ($1, Div, $3) }
+  | LPAREN expr1 RPAREN { $2 }
   | expr0               { $1 }
 
 expr0:
