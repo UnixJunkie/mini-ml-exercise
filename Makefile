@@ -1,8 +1,8 @@
 
 all:
 	ocamlc -c -annot ast.ml
-	ocamllex lexer.mll       # generates lexer.ml
-	ocamlyacc parser.mly     # generates parser.ml and parser.mli
+	ocamllex lexer.mll   # generates lexer.ml
+	ocamlyacc parser.mly # generates parser.ml and parser.mli
 	ocamlc -c -annot parser.mli
 	ocamlc -c -annot lexer.ml
 	ocamlc -c -annot parser.ml
