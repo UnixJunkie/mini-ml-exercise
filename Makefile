@@ -1,12 +1,12 @@
 
 all:
-	ocamlc -c ast.ml
+	ocamlc -c -annot ast.ml
 	ocamllex lexer.mll       # generates lexer.ml
 	ocamlyacc parser.mly     # generates parser.ml and parser.mli
-	ocamlc -c parser.mli
-	ocamlc -c lexer.ml
-	ocamlc -c parser.ml
-	ocamlc -c main.ml
+	ocamlc -c -annot parser.mli
+	ocamlc -c -annot lexer.ml
+	ocamlc -c -annot parser.ml
+	ocamlc -c -annot main.ml
 	ocamlc -o test lexer.cmo parser.cmo ast.cmo main.cmo
 
 clean:
