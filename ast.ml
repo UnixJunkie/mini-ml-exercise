@@ -111,3 +111,9 @@ let rec string_of_db_expr (e: db_expr) = match e with
     "let " ^ (string_of_db_expr (DB_var v)) ^
     " = "  ^ (string_of_db_expr init_expr) ^
     " in " ^ (string_of_db_expr in_expr)
+
+type value =
+  | Val_const of const
+  | Val_fun of var * expr
+
+type state = value list
