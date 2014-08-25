@@ -43,10 +43,11 @@ let const_of_bool = function
   | false -> False
   | true -> True
 
-(* let string_of_var (name, index) = *)
-(*   Printf.sprintf "%s_%d" name index *)
 let string_of_var name =
   name
+
+let string_of_db_var v i =
+  P.sprintf "(%s, %d)" v i
 
 let string_of_bin_op = function
   | Plus  -> "+"
@@ -106,11 +107,17 @@ let rec dbi_indexes (vars: db_var list) (e: expr): db_expr = match e with
 
 let rec string_of_db_expr (e: db_expr) = match e with
   | DB_const c -> string_of_const c
-  | DB_var (v, i) -> P.sprintf "(%s, %d)" v i
+  | DB_var (v, i) -> string_of_db_var v i
   | DB_bin_op (e1, op, e2) ->
-    (string_of_db_expr e1) ^ " " ^ (string_of_bin_op op) ^ " " ^ (string_of_db_expr e2)
-  | DB_apply (e1, e2) -> (string_of_db_expr e1) ^ " " ^ (string_of_db_expr e2)
-  | DB_fun (v, e) -> "fun " ^ (string_of_db_expr (DB_var v)) ^ " -> " ^ (string_of_db_expr e)
+    (string_of_db_expr e1) ^ " " ^
+    (string_of_bin_op op) ^ " " ^
+    (string_of_db_expr e2)
+  | DB_apply (e1, e2) ->
+    (string_of_db_expr e1) ^ " " ^
+    (string_of_db_expr e2)
+  | DB_fun (v, e) ->
+    "fun " ^ (string_of_db_expr (DB_var v)) ^
+    " -> " ^ (string_of_db_expr e)
   | DB_let (v, init_expr, in_expr) ->
     "let " ^ (string_of_db_expr (DB_var v)) ^
     " = "  ^ (string_of_db_expr init_expr) ^
@@ -118,13 +125,17 @@ let rec string_of_db_expr (e: db_expr) = match e with
 
 type value =
   | Val_const of const
-  | Val_fun of var * expr
+  | Val_fun of db_var * db_expr
+
+let string_of_value = function
+  | Val_const c -> string_of_const c
+  | Val_fun (v, e) -> "(" ^ (string_of_db_expr (DB_fun (v, e))) ^ ")"
 
 (* program state *)
 type state = value list
 
 (* retrieve variable at index 'i' in 'state' *)
-let rec lookup i state =
+let rec lookup (i: int) (state: state): value =
   if i < 0 then failwith (P.sprintf "lookup %d" i);
   match state with
   | [] -> failwith (P.sprintf "lookup %d []" i)
@@ -137,10 +148,11 @@ type const_type =
   | CT_bool of bool
   | CT_int of int
 
-let type_const = function
-  | True -> CT_bool true
-  | False -> CT_bool false
-  | Int i -> CT_int i
+let type_const (c: value): const_type = match c with
+  | Val_const True    -> CT_bool true
+  | Val_const False   -> CT_bool false
+  | Val_const (Int i) -> CT_int i
+  | _ -> failwith "type_const tried on Val_fun"
 
 let apply op e1 e2 = match (type_const e1, type_const e2) with
   | (CT_bool b1, CT_bool b2) ->
@@ -160,25 +172,24 @@ let apply op e1 e2 = match (type_const e1, type_const e2) with
      | _ -> failwith (P.sprintf "%s applied on integers" (string_of_bin_op op))
     )
 
-(* let interpret (ex: expr): value = *)
-(*   let rec loop (s: state) (e: db_expr): value = *)
-(*     | DB_const c -> Val_const c *)
-(*     | DB_var (_v, i) -> lookup i state *)
-(*     | DB_bin_op (e1, op, e2) -> *)
-(*       let v1 = loop s e1 in *)
-(*       let v2 = loop s e2 in *)
-(*       match op with *)
-(*       | Plus *)
-(*       | Minus *)
-(*       | Mult *)
-(*       | Div *)
-(*       | And *)
-(*       | Or *)
-(*     | DB_apply (e1, e2) -> (string_of_db_expr e1) ^ " " ^ (string_of_db_expr e2) *)
-(*     | DB_fun (v, e) -> "fun " ^ (string_of_db_expr (DB_var v)) ^ " -> " ^ (string_of_db_expr e) *)
-(*     | DB_let (v, init_expr, in_expr) -> *)
-(*       "let " ^ (string_of_db_expr (DB_var v)) ^ *)
-(*       " = "  ^ (string_of_db_expr init_expr) ^ *)
-(*       " in " ^ (string_of_db_expr in_expr) *)
-(*   in *)
-(*   loop [] (dbi_indexes [] ex) *)
+let interpret (ex: db_expr): value =
+  let rec loop (s: state) (e: db_expr): value = match e with
+    | DB_const c -> Val_const c
+    | DB_fun (v, e) -> Val_fun (v, e)
+    | DB_var (_v, i) -> lookup i s
+    | DB_let (v, init_expr, in_expr) ->
+      let new_v = loop s init_expr in
+      loop (new_v :: s) in_expr
+    | DB_apply (e1, e2) ->
+      (match e1 with
+       | DB_fun (v, e') ->
+         let param = loop s e2 in
+         loop (param :: s) e'
+       | _ -> failwith "only a function can be applied"
+      )
+    | DB_bin_op (e1, op, e2) ->
+      let v1 = loop s e1 in
+      let v2 = loop s e2 in
+      apply op v1 v2
+  in
+  loop [] ex
