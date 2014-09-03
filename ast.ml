@@ -211,7 +211,31 @@ and val_or_closure =
   | Clo of closure
 
 type vm_state =
-  instruction list * (* code *)
-  val_or_closure list * (* env *)
-  value list * (* exec stack *)
+  instruction list *    (* code *)
+  value list *          (* env *)
+  val_or_closure list * (* exec stack *)
   instruction list list (* call stack *)
+
+let skip n l =
+  if n < 0 then failwith (P.sprintf "skip: n: %d" n);
+  let rec loop i lst =
+    if i = 0 then lst
+    else
+      match lst with
+      | x :: xs -> loop (i - 1) xs
+      | _ -> failwith (P.sprintf "skip: too much: i: %d" i)
+  in
+  loop n l
+
+(* let rec execute = function *)
+(*   | ([], e, s, r) -> ([], e, s, r) (\* FBR: not sure what to do here *\) *)
+(*   | (Access n :: c, e, s, r) -> execute (c, e, [find n e], r) *)
+(*   | (Apply :: c, e, (c0, e0) :: v :: s, r) -> execute (c0, v :: e0, s, (c, e) :: r) *)
+(*   | (Cur c' :: c, e, s, r) -> execute (c, e, (c', e), r) *)
+(*   | (Return :: c, e, s, (c0, e0) :: r) -> execute (c0, e0, s, r) *)
+(*   | (Let :: c, e, v :: s, r) -> execute (c, v :: e, s, r) *)
+(*   | (Branch n :: c, e, s, r) -> execute (skip n c, e, s, r) *)
+(*   | (Branchneg n :: c, e, true :: s, r) -> execute (c, e, s, r) *)
+(*   | (Branchneg n :: c, e, false :: s, r) -> execute (skip n c, e, s, r) *)
+(*   | (Op(⊕), e, v :: w :: s, r) -> execute (c, e, v ⊕ w, r) *)
+(*   | (Push v :: c, e, s, r) -> execute (c, e, v :: s, r) *)
