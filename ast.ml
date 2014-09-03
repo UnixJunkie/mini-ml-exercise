@@ -204,3 +204,14 @@ type instruction =
   | Branch of int      (* unconditional branch *)
   | Op of bin_op       (* binary operation *)
   | Push of const_type (* push val on the stack *)
+
+type closure = instruction list * val_or_closure list
+and val_or_closure =
+  | Val of const
+  | Clo of closure
+
+type vm_state =
+  instruction list * (* code *)
+  val_or_closure list * (* env *)
+  value list * (* exec stack *)
+  instruction list list (* call stack *)
