@@ -1,6 +1,6 @@
 *.annot
 *.cmi
 *.cmo
-testlexer.ml
+lexer.ml
 parser.ml
 parser.mli
