@@ -193,3 +193,14 @@ let interpret (ex: db_expr): value =
       apply op v1 v2
   in
   loop [] ex
+
+type instruction =
+  | Access of int      (* acces a var in the env *)
+  | Apply              (* apply a function *)
+  | Cur of instruction list (* body of a function *)
+  | Return             (* return from a function *)
+  | Let                (* add var to env *)
+  | Branchneg of int   (* conditional branch *)
+  | Branch of int      (* unconditional branch *)
+  | Op of bin_op       (* binary operation *)
+  | Push of const_type (* push val on the stack *)
