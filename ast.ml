@@ -127,6 +127,10 @@ type value =
   | Val_const of const
   | Val_fun of db_var * db_expr
 
+let const_of_value = function
+  | Val_const c -> c
+  | Val_fun _ -> failwith "const_of_value: cannot work on a Val_fun"
+
 let string_of_value = function
   | Val_const c -> string_of_const c
   | Val_fun (v, e) -> "(" ^ (string_of_db_expr (DB_fun (v, e))) ^ ")"
@@ -203,7 +207,7 @@ type instruction =
   | Branchneg of int   (* conditional branch *)
   | Branch of int      (* unconditional branch *)
   | Op of bin_op       (* binary operation *)
-  | Push of const_type (* push val on the stack *)
+  | Push of const      (* push val on the stack *)
 
 type closure = instruction list * val_or_closure list
 and val_or_closure =
@@ -212,10 +216,11 @@ and val_or_closure =
 
 type vm_state =
   instruction list *    (* code *)
-  value list *          (* env *)
+  val_or_closure list * (* env *)
   val_or_closure list * (* exec stack *)
-  instruction list list (* call stack *)
+  closure list          (* call stack *)
 
+(* skip 'n' elements in 'l' *)
 let skip n l =
   if n < 0 then failwith (P.sprintf "skip: n: %d" n);
   let rec loop i lst =
@@ -227,15 +232,21 @@ let skip n l =
   in
   loop n l
 
-(* let rec execute = function *)
-(*   | ([], e, s, r) -> ([], e, s, r) (\* FBR: not sure what to do here *\) *)
-(*   | (Access n :: c, e, s, r) -> execute (c, e, [find n e], r) *)
-(*   | (Apply :: c, e, (c0, e0) :: v :: s, r) -> execute (c0, v :: e0, s, (c, e) :: r) *)
-(*   | (Cur c' :: c, e, s, r) -> execute (c, e, (c', e), r) *)
-(*   | (Return :: c, e, s, (c0, e0) :: r) -> execute (c0, e0, s, r) *)
-(*   | (Let :: c, e, v :: s, r) -> execute (c, v :: e, s, r) *)
-(*   | (Branch n :: c, e, s, r) -> execute (skip n c, e, s, r) *)
-(*   | (Branchneg n :: c, e, true :: s, r) -> execute (c, e, s, r) *)
-(*   | (Branchneg n :: c, e, false :: s, r) -> execute (skip n c, e, s, r) *)
-(*   | (Op(⊕), e, v :: w :: s, r) -> execute (c, e, v ⊕ w, r) *)
-(*   | (Push v :: c, e, s, r) -> execute (c, e, v :: s, r) *)
+let rec execute (cesr: vm_state) = match cesr with
+  | ([], e, s, r) -> ([], e, s, r) (* FBR: not sure what to do here *)
+  | (Access n :: c, e, s, r) -> execute (c, e, [L.nth e n], r)
+  | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) -> execute (c0, Val v :: e0, s, (c, e) :: r)
+  | (Apply :: c, e, _, r) -> failwith "execute: cannot apply"
+  | (Cur c' :: c, e, s, r) -> execute (c, e, [Clo (c', e)], r)
+  | (Return :: c, e, s, (c0, e0) :: r) -> execute (c0, e0, s, r)
+  | (Return :: c, e, s, _) -> failwith "execute: cannot Return"
+  | (Let :: c, e, v :: s, r) -> execute (c, v :: e, s, r)
+  | (Let :: c, e, [], r) -> failwith "execute: cannot Let"
+  | (Branch n :: c, e, s, r) -> execute (skip n c, e, s, r)
+  | (Branchneg n :: c, e, Val True :: s, r) -> execute (c, e, s, r) (* exec next instr *)
+  | (Branchneg n :: c, e, Val False :: s, r) -> execute (skip n c, e, s, r) (* skip next n instr *)
+  | (Branchneg n :: c, e, _, r) -> failwith "execute: cannot branch"
+  | (Op op :: c, e, Val v :: Val w :: s, r) ->
+    execute (c, e, [Val (const_of_value (apply op (Val_const v) (Val_const w)))], r)
+  | (Op op :: c, e, _, r) -> failwith "execute: cannot op"
+  | (Push v :: c, e, s, r) -> execute (c, e, Val v :: s, r)
