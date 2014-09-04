@@ -71,10 +71,12 @@ let rec string_of_expr (e: expr) = match e with
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
 
+exception Error of string
+
 (* return the DBI of var v *)
 (* FBR: simplifier *)
 let rec find_dbi (v: var) (vars: db_var list) = match vars with
-  | [] -> failwith ("find_dbi: cannot find: " ^ (string_of_var v))
+  | [] -> raise @@ Error ("find_dbi: cannot find: " ^ (string_of_var v))
   | (u, i) :: rest ->
     if u = v then i
     else find_dbi v rest
@@ -228,7 +230,7 @@ let rec string_of_instruction = function
   | Op op -> sprintf "Op %s" (string_of_bin_op op)
   | Push c -> sprintf "Push %s" (string_of_const c)
 and string_of_instructions instructions =
-  string_of_list string_of_instruction " " instructions
+  string_of_list string_of_instruction "; " instructions
 
 type closure = instruction list * val_or_closure list
 and val_or_closure =
@@ -255,10 +257,12 @@ type vm_state =
   closure list          (* call stack *)
 
 let string_of_vm_state ((c, e, s, r): vm_state): string =
+  "\n---\n" ^
   "code: "       ^ string_of_instructions c    ^ "\n" ^
   "env: "        ^ string_of_val_or_closures e ^ "\n" ^
   "exec_stack: " ^ string_of_val_or_closures s ^ "\n" ^
-  "call_stack: " ^ string_of_closures r        ^ "\n"
+  "call_stack: " ^ string_of_closures r        ^ "\n" ^
+  "---"
 
 (* skip 'n' elements in 'l' *)
 let skip n l =
@@ -271,6 +275,14 @@ let skip n l =
       | _ -> failwith (sprintf "skip: too much: i: %d" i)
   in
   loop n l
+
+let rec access i l =
+  if i < 0 then failwith (sprintf "access: negative index: %d" i);
+  if i = 0 then match l with
+    | x :: _ -> x
+    | [] -> failwith (sprintf "access: cannot access index: %d" i);
+  else
+    access (i - 1) l
 
 let rec execute (cesr: vm_state) = match cesr with
   | ([], e, s, r) -> ([], e, s, r) (* FBR: not sure what to do here *)
@@ -308,21 +320,23 @@ let rec execute (cesr: vm_state) = match cesr with
     execute (c, e, Val v :: s, r)
 
 (* the compiler *)
-let rec compile (program: db_expr) (acc: instruction list): instruction list =
-  match program with (* the interpreter code is in comments *)
-  | DB_const c -> (* Val_const c *) (Push c) :: acc (* terminal case *)
-    (* FBR: il va bien falloir renverser l'accu a un moment *)
-  | DB_fun (_v, e) -> (* Val_fun (v, e) *) (Cur (compile e [])) :: acc
-  | DB_var (_v, i) -> (* lookup i s *) (Access i) :: acc
-  | DB_let (v, init_expr, in_expr) ->
-    (* let new_v = loop s init_expr in loop (new_v :: s) in_expr *)
-    compile in_expr (compile init_expr acc)
+let rec compile (program: db_expr): instruction list =
+  (* return instructions in the correct order *)
+  L.rev @@ loop program []
+and loop (prog: db_expr) (acc: instruction list): instruction list =
+  match prog with
+  | DB_const c ->
+    (Push c) :: acc
+  | DB_fun (_v, e) ->
+    (Cur (compile e)) :: acc
+  | DB_var (_v, i) ->
+    (Access i) :: acc
+  | DB_let (_v, init_expr, in_expr) ->
+    loop in_expr (loop init_expr acc)
   | DB_apply (e1, e2) ->
-    (* (match e1 with *)
-    (*  | DB_fun (v, e') -> let param = loop s e2 in loop (param :: s) e' *)
-    (*  | _ -> failwith "only a function can be applied" *)
-    (* ) *)
-    Apply :: compile e1 (compile e2 acc)
+    Apply :: loop e1 (loop e2 acc)
   | DB_bin_op (e1, op, e2) ->
-    (* let v1, v2 = loop s e1, loop s e2 in apply op v1 v2 *)
-    Op op :: compile e1 (compile e2 acc)
+    Op op :: loop e1 (loop e2 acc)
+
+let run (instrs: instruction list): vm_state =
+  execute (instrs, [], [], [])
