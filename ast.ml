@@ -321,22 +321,23 @@ let rec execute (cesr: vm_state) = match cesr with
 
 (* the compiler *)
 let rec compile (program: db_expr): instruction list =
+  let rec loop (prog: db_expr) (acc: instruction list): instruction list =
+    match prog with
+    | DB_const c ->
+      (Push c) :: acc
+    | DB_fun (_v, e) ->
+      (Cur (compile e)) :: acc
+    | DB_var (_v, i) ->
+      (Access i) :: acc
+    | DB_let (_v, init_expr, in_expr) ->
+      loop in_expr (loop init_expr acc)
+    | DB_apply (e1, e2) ->
+      Apply :: loop e1 (loop e2 acc)
+    | DB_bin_op (e1, op, e2) ->
+      Op op :: loop e1 (loop e2 acc)
+  in
   (* return instructions in the correct order *)
   L.rev @@ loop program []
-and loop (prog: db_expr) (acc: instruction list): instruction list =
-  match prog with
-  | DB_const c ->
-    (Push c) :: acc
-  | DB_fun (_v, e) ->
-    (Cur (compile e)) :: acc
-  | DB_var (_v, i) ->
-    (Access i) :: acc
-  | DB_let (_v, init_expr, in_expr) ->
-    loop in_expr (loop init_expr acc)
-  | DB_apply (e1, e2) ->
-    Apply :: loop e1 (loop e2 acc)
-  | DB_bin_op (e1, op, e2) ->
-    Op op :: loop e1 (loop e2 acc)
 
 let run (instrs: instruction list): vm_state =
   execute (instrs, [], [], [])
