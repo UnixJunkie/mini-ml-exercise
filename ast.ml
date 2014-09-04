@@ -285,9 +285,9 @@ let rec access i l =
     access (i - 1) l
 
 let rec execute (cesr: vm_state) = match cesr with
-  | ([], e, s, r) -> ([], e, s, r) (* FBR: not sure what to do here *)
+  | ([], e, s, r) -> ([], e, s, r)
   | (Access n :: c, e, s, r) ->
-    execute (c, e, [L.nth e n], r)
+    execute (c, e, [access n e], r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
     execute (c0, Val v :: e0, s, (c, e) :: r)
   | (Apply :: c, e, _, r) ->
@@ -317,7 +317,7 @@ let rec execute (cesr: vm_state) = match cesr with
   | (Op op :: c, e, _, r) ->
     failwith "execute: cannot op"
   | (Push v :: c, e, s, r) ->
-    execute (c, e, Val v :: s, r)
+    execute (c, Val v :: e, s, r)
 
 (* the compiler *)
 let rec compile (program: db_expr): instruction list =
