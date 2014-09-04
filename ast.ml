@@ -234,19 +234,35 @@ let skip n l =
 
 let rec execute (cesr: vm_state) = match cesr with
   | ([], e, s, r) -> ([], e, s, r) (* FBR: not sure what to do here *)
-  | (Access n :: c, e, s, r) -> execute (c, e, [L.nth e n], r)
-  | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) -> execute (c0, Val v :: e0, s, (c, e) :: r)
-  | (Apply :: c, e, _, r) -> failwith "execute: cannot apply"
-  | (Cur c' :: c, e, s, r) -> execute (c, e, [Clo (c', e)], r)
-  | (Return :: c, e, s, (c0, e0) :: r) -> execute (c0, e0, s, r)
-  | (Return :: c, e, s, _) -> failwith "execute: cannot Return"
-  | (Let :: c, e, v :: s, r) -> execute (c, v :: e, s, r)
-  | (Let :: c, e, [], r) -> failwith "execute: cannot Let"
-  | (Branch n :: c, e, s, r) -> execute (skip n c, e, s, r)
-  | (Branchneg n :: c, e, Val True :: s, r) -> execute (c, e, s, r) (* exec next instr *)
-  | (Branchneg n :: c, e, Val False :: s, r) -> execute (skip n c, e, s, r) (* skip next n instr *)
+  | (Access n :: c, e, s, r) ->
+    execute (c, e, [L.nth e n], r)
+  | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
+    execute (c0, Val v :: e0, s, (c, e) :: r)
+  | (Apply :: c, e, _, r) ->
+    failwith "execute: cannot apply"
+  | (Cur c' :: c, e, s, r) ->
+    execute (c, e, [Clo (c', e)], r)
+  | (Return :: c, e, s, (c0, e0) :: r) ->
+    execute (c0, e0, s, r)
+  | (Return :: c, e, s, _) ->
+    failwith "execute: cannot Return"
+  | (Let :: c, e, v :: s, r) ->
+    execute (c, v :: e, s, r)
+  | (Let :: c, e, [], r) ->
+    failwith "execute: cannot Let"
+  | (Branch n :: c, e, s, r) ->
+    execute (skip n c, e, s, r)
+  | (Branchneg n :: c, e, Val True :: s, r) ->
+    execute (c, e, s, r) (* exec next instr *)
+  | (Branchneg n :: c, e, Val False :: s, r) ->
+    execute (skip n c, e, s, r) (* skip next n instr *)
   | (Branchneg n :: c, e, _, r) -> failwith "execute: cannot branch"
   | (Op op :: c, e, Val v :: Val w :: s, r) ->
-    execute (c, e, [Val (const_of_value (apply op (Val_const v) (Val_const w)))], r)
-  | (Op op :: c, e, _, r) -> failwith "execute: cannot op"
-  | (Push v :: c, e, s, r) -> execute (c, e, Val v :: s, r)
+    (* FBR: maybe :: s is missing in there and in the spec. *)
+    execute (c, e,
+             [Val (const_of_value (apply op (Val_const v) (Val_const w)))],
+             r)
+  | (Op op :: c, e, _, r) ->
+    failwith "execute: cannot op"
+  | (Push v :: c, e, s, r) ->
+    execute (c, e, Val v :: s, r)
