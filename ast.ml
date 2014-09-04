@@ -188,6 +188,10 @@ let interpret (ex: db_expr): value =
     | DB_apply (e1, e2) ->
       (match e1 with
        | DB_fun (v, e') ->
+         (* FBR: this will have to be fixed so that we can do partial
+                 application of functions
+            e.g.  echo "let f = fun x -> (fun y -> x + y) in (f 3) 4" | ./test
+         *)
          let param = loop s e2 in
          loop (param :: s) e'
        | _ -> failwith "only a function can be applied"
@@ -241,6 +245,8 @@ and string_of_val_or_closure = function
   | Clo c -> string_of_closure c
 and string_of_val_or_closures vocs =
   string_of_list string_of_val_or_closure " " vocs
+and string_of_closures cs =
+  string_of_list string_of_closure " " cs
 
 type vm_state =
   instruction list *    (* code *)
@@ -249,8 +255,10 @@ type vm_state =
   closure list          (* call stack *)
 
 let string_of_vm_state ((c, e, s, r): vm_state): string =
-  "code: " ^ (string_of_list string_of_instruction " " c) ^ "\n" ^
-  failwith "not implemented yet"
+  "code: "       ^ string_of_instructions c    ^ "\n" ^
+  "env: "        ^ string_of_val_or_closures e ^ "\n" ^
+  "exec_stack: " ^ string_of_val_or_closures s ^ "\n" ^
+  "call_stack: " ^ string_of_closures r        ^ "\n"
 
 (* skip 'n' elements in 'l' *)
 let skip n l =
