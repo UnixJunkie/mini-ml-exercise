@@ -74,7 +74,7 @@ let rec string_of_expr (e: expr) = match e with
 (* return the DBI of var v *)
 (* FBR: simplifier *)
 let rec find_dbi (v: var) (vars: db_var list) = match vars with
-  | [] -> -1 (* a free variable *)
+  | [] -> failwith ("find_dbi: cannot find: " ^ (string_of_var v))
   | (u, i) :: rest ->
     if u = v then i
     else find_dbi v rest
@@ -216,25 +216,41 @@ let string_of_list to_string sep l =
 let rec string_of_instruction = function
   | Access i -> sprintf "Access %d" i
   | Apply -> "Apply"
-  | Cur instructions ->
-    "Cur " ^ (string_of_list string_of_instruction " " instructions)
+  | Cur instrs -> "Cur " ^ string_of_instructions instrs
   | Return -> "Return"
   | Let -> "Let"
   | Branchneg i -> sprintf "Branchneg %d" i
   | Branch i -> sprintf "Branch %d" i
   | Op op -> sprintf "Op %s" (string_of_bin_op op)
   | Push c -> sprintf "Push %s" (string_of_const c)
+and string_of_instructions instructions =
+  string_of_list string_of_instruction " " instructions
 
 type closure = instruction list * val_or_closure list
 and val_or_closure =
   | Val of const
   | Clo of closure
 
+let rec string_of_closure ((code, env): closure): string =
+  "(" ^ (string_of_instructions code)
+  ^ ", "
+  ^ (string_of_val_or_closures env)
+  ^ ")"
+and string_of_val_or_closure = function
+  | Val v -> string_of_const v
+  | Clo c -> string_of_closure c
+and string_of_val_or_closures vocs =
+  string_of_list string_of_val_or_closure " " vocs
+
 type vm_state =
   instruction list *    (* code *)
   val_or_closure list * (* env *)
   val_or_closure list * (* exec stack *)
   closure list          (* call stack *)
+
+let string_of_vm_state ((c, e, s, r): vm_state): string =
+  "code: " ^ (string_of_list string_of_instruction " " c) ^ "\n" ^
+  failwith "not implemented yet"
 
 (* skip 'n' elements in 'l' *)
 let skip n l =
