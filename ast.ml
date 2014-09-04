@@ -246,9 +246,9 @@ and string_of_val_or_closure = function
   | Val v -> string_of_const v
   | Clo c -> string_of_closure c
 and string_of_val_or_closures vocs =
-  string_of_list string_of_val_or_closure " " vocs
+  string_of_list string_of_val_or_closure "; " vocs
 and string_of_closures cs =
-  string_of_list string_of_closure " " cs
+  string_of_list string_of_closure "; " cs
 
 type vm_state =
   instruction list *    (* code *)
@@ -284,10 +284,12 @@ let rec access i l =
   else
     access (i - 1) l
 
-let rec execute (cesr: vm_state) = match cesr with
+let rec execute (cesr: vm_state) =
+  printf "%s\n" (string_of_vm_state cesr); (* debug trace *)
+  match cesr with
   | ([], e, s, r) -> ([], e, s, r)
   | (Access n :: c, e, s, r) ->
-    execute (c, e, [access n e], r)
+    execute (c, e, (access n e) :: s, r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
     execute (c0, Val v :: e0, s, (c, e) :: r)
   | (Apply :: c, e, _, r) ->
@@ -310,14 +312,13 @@ let rec execute (cesr: vm_state) = match cesr with
     execute (skip n c, e, s, r) (* skip next n instr *)
   | (Branchneg n :: c, e, _, r) -> failwith "execute: cannot branch"
   | (Op op :: c, e, Val v :: Val w :: s, r) ->
-    (* FBR: maybe :: s is missing in there and in the spec. *)
     execute (c, e,
-             [Val (const_of_value (apply op (Val_const v) (Val_const w)))],
+             Val (const_of_value (apply op (Val_const v) (Val_const w))) :: s,
              r)
   | (Op op :: c, e, _, r) ->
     failwith "execute: cannot op"
   | (Push v :: c, e, s, r) ->
-    execute (c, Val v :: e, s, r)
+    execute (c, e, Val v :: s, r)
 
 (* the compiler *)
 let rec compile (program: db_expr): instruction list =
