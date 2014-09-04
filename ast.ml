@@ -1,6 +1,7 @@
 
+open Printf
+
 module L = List
-module P = Printf
 
 (* basic types *)
 
@@ -47,7 +48,7 @@ let string_of_var name =
   name
 
 let string_of_db_var v i =
-  P.sprintf "(%s, %d)" v i
+  sprintf "(%s, %d)" v i
 
 let string_of_bin_op = function
   | Plus  -> "+"
@@ -140,9 +141,9 @@ type state = value list
 
 (* retrieve variable at index 'i' in 'state' *)
 let rec lookup (i: int) (state: state): value =
-  if i < 0 then failwith (P.sprintf "lookup %d" i);
+  if i < 0 then failwith (sprintf "lookup %d" i);
   match state with
-  | [] -> failwith (P.sprintf "lookup %d []" i)
+  | [] -> failwith (sprintf "lookup %d []" i)
   | s :: ss ->
     if i = 0 then s
     else lookup (i - 1) ss
@@ -163,7 +164,7 @@ let apply op e1 e2 = match (type_const e1, type_const e2) with
     (match op with
      | And -> Val_const (const_of_bool (b1 && b2))
      | Or  -> Val_const (const_of_bool (b1 || b2))
-     | _ -> failwith (P.sprintf "%s applied on booleans" (string_of_bin_op op))
+     | _ -> failwith (sprintf "%s applied on booleans" (string_of_bin_op op))
     )
   | (CT_int   _, CT_bool _) -> failwith "type mismatch: int with bool"
   | (CT_bool  _, CT_int  _) -> failwith "type mismatch: bool with int"
@@ -173,7 +174,7 @@ let apply op e1 e2 = match (type_const e1, type_const e2) with
      | Minus -> Val_const (Int (i1 - i2))
      | Mult -> Val_const (Int (i1 * i2))
      | Div -> Val_const (Int (i1 / i2))
-     | _ -> failwith (P.sprintf "%s applied on integers" (string_of_bin_op op))
+     | _ -> failwith (sprintf "%s applied on integers" (string_of_bin_op op))
     )
 
 let interpret (ex: db_expr): value =
@@ -209,6 +210,21 @@ type instruction =
   | Op of bin_op       (* binary operation *)
   | Push of const      (* push val on the stack *)
 
+let string_of_list to_string sep l =
+  "[" ^ String.concat sep (L.map to_string l) ^ "]"
+
+let rec string_of_instruction = function
+  | Access i -> sprintf "Access %d" i
+  | Apply -> "Apply"
+  | Cur instructions ->
+    "Cur " ^ (string_of_list string_of_instruction " " instructions)
+  | Return -> "Return"
+  | Let -> "Let"
+  | Branchneg i -> sprintf "Branchneg %d" i
+  | Branch i -> sprintf "Branch %d" i
+  | Op op -> sprintf "Op %s" (string_of_bin_op op)
+  | Push c -> sprintf "Push %s" (string_of_const c)
+
 type closure = instruction list * val_or_closure list
 and val_or_closure =
   | Val of const
@@ -222,13 +238,13 @@ type vm_state =
 
 (* skip 'n' elements in 'l' *)
 let skip n l =
-  if n < 0 then failwith (P.sprintf "skip: n: %d" n);
+  if n < 0 then failwith (sprintf "skip: n: %d" n);
   let rec loop i lst =
     if i = 0 then lst
     else
       match lst with
       | x :: xs -> loop (i - 1) xs
-      | _ -> failwith (P.sprintf "skip: too much: i: %d" i)
+      | _ -> failwith (sprintf "skip: too much: i: %d" i)
   in
   loop n l
 
