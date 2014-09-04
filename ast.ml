@@ -71,6 +71,7 @@ let rec string_of_expr (e: expr) = match e with
     (string_of_expr in_expr)
 
 (* return the DBI of var v *)
+(* FBR: simplifier *)
 let rec find_dbi (v: var) (vars: db_var list) = match vars with
   | [] -> -1 (* a free variable *)
   | (u, i) :: rest ->
@@ -86,8 +87,7 @@ let add_dbi (v: var) (vars: db_var list) =
 
 (* transform an expression into an expression with De Bruijn indexes
    let x = "a" in x -> 0
-   let x = "a" in (let y = "b" in x * y) -> 1 * 0
-*)
+   let x = "a" in (let y = "b" in x * y) -> 1 * 0 *)
 let rec dbi_indexes (vars: db_var list) (e: expr): db_expr = match e with
   | Const c -> DB_const c
   | Var v -> DB_var (v, find_dbi v vars)
@@ -266,3 +266,23 @@ let rec execute (cesr: vm_state) = match cesr with
     failwith "execute: cannot op"
   | (Push v :: c, e, s, r) ->
     execute (c, e, Val v :: s, r)
+
+(* the compiler *)
+let rec compile (program: db_expr) (acc: instruction list): instruction list =
+  match program with (* the interpreter code is in comments *)
+  | DB_const c -> (* Val_const c *) (Push c) :: acc (* terminal case *)
+    (* FBR: il va bien falloir renverser l'accu a un moment *)
+  | DB_fun (_v, e) -> (* Val_fun (v, e) *) (Cur (compile e [])) :: acc
+  | DB_var (_v, i) -> (* lookup i s *) (Access i) :: acc
+  | DB_let (v, init_expr, in_expr) ->
+    (* let new_v = loop s init_expr in loop (new_v :: s) in_expr *)
+    compile in_expr (compile init_expr acc)
+  | DB_apply (e1, e2) ->
+    (* (match e1 with *)
+    (*  | DB_fun (v, e') -> let param = loop s e2 in loop (param :: s) e' *)
+    (*  | _ -> failwith "only a function can be applied" *)
+    (* ) *)
+    Apply :: compile e1 (compile e2 acc)
+  | DB_bin_op (e1, op, e2) ->
+    (* let v1, v2 = loop s e1, loop s e2 in apply op v1 v2 *)
+    Op op :: compile e1 (compile e2 acc)
