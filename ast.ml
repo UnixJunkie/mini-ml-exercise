@@ -261,8 +261,7 @@ let string_of_vm_state ((c, e, s, r): vm_state): string =
   "code: "       ^ string_of_instructions c    ^ "\n" ^
   "env: "        ^ string_of_val_or_closures e ^ "\n" ^
   "exec_stack: " ^ string_of_val_or_closures s ^ "\n" ^
-  "call_stack: " ^ string_of_closures r        ^ "\n" ^
-  "---"
+  "call_stack: " ^ string_of_closures r        ^ "\n"
 
 (* skip 'n' elements in 'l' *)
 let skip n l =
@@ -287,6 +286,7 @@ let rec access i l =
 let rec execute (cesr: vm_state) =
   printf "%s\n" (string_of_vm_state cesr); (* debug trace *)
   match cesr with
+  (* FBR: we need to check that r is empty before stopping *)
   | ([], e, s, r) -> ([], e, s, r)
   | (Access n :: c, e, s, r) ->
     execute (c, e, (access n e) :: s, r)
