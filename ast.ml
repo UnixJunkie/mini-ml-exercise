@@ -285,12 +285,6 @@ let rec access i l =
 
 let rec execute (cesr: vm_state) =
   printf "%s\n" (string_of_vm_state cesr); (* debug trace *)
-(*
-  (match cesr with
-   | (c :: cs, _, _, _) -> printf "instr: %s\n" (string_of_instruction c)
-   | _ -> ()
-  );
-*)
   match cesr with
   | ([], e, s, []) ->
     ([], e, s, [])
@@ -302,18 +296,15 @@ let rec execute (cesr: vm_state) =
     execute (c0, Val v :: e0, s, (c, e) :: r)
   | (Apply :: c, e, Clo (c0, e0) :: s, r) -> (* partial application *)
     execute (c0, e0, s, (c, e) :: r)
-  | (Apply :: c, e, _, r) ->
-    failwith "execute: cannot apply"
+  | (Apply :: c, e, _, r) -> failwith "execute: cannot apply"
   | (Cur c' :: c, e, s, r) ->
     execute (c, e, Clo (c', e) :: s, r)
   | (Return :: c, e, s, (c0, e0) :: r) ->
     execute (c0, e0, s, r)
-  | (Return :: c, e, s, _) ->
-    failwith "execute: cannot Return"
+  | (Return :: c, e, s, _) -> failwith "execute: cannot Return"
   | (Let :: c, e, v :: s, r) ->
     execute (c, v :: e, s, r)
-  | (Let :: c, e, [], r) ->
-    failwith "execute: cannot Let"
+  | (Let :: c, e, [], r) -> failwith "execute: cannot Let"
   | (Branch n :: c, e, s, r) ->
     execute (skip n c, e, s, r)
   | (Branchneg n :: c, e, Val True :: s, r) ->
@@ -325,8 +316,7 @@ let rec execute (cesr: vm_state) =
     execute (c, e,
              Val (const_of_value (apply op (Val_const v) (Val_const w))) :: s,
              r)
-  | (Op op :: c, e, _, r) ->
-    failwith "execute: cannot op"
+  | (Op op :: c, e, _, r) -> failwith "execute: cannot op"
   | (Push v :: c, e, s, r) ->
     execute (c, e, Val v :: s, r)
 
