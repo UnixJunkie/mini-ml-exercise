@@ -14,6 +14,8 @@ type db_var = string * int
 
 type bin_op = Plus | Minus | Mult | Div | And | Or
 
+exception Error of string
+
 (* expressions *)
 
 type expr =
@@ -71,7 +73,7 @@ let rec string_of_expr (e: expr) = match e with
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
 
-exception Error of string
+
 
 (* return the DBI of var v *)
 (* FBR: simplifier *)
@@ -196,7 +198,7 @@ let interpret (ex: db_expr): value =
          *)
          let param = loop s e2 in
          loop (param :: s) e'
-       | _ -> failwith "only a function can be applied"
+       | _ -> raise @@ Error "interpret: only a function can be applied"
       )
     | DB_bin_op (e1, op, e2) ->
       let v1 = loop s e1 in
@@ -298,6 +300,8 @@ let rec execute (cesr: vm_state) =
     execute (c, e, (access n e) :: s, r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
     execute (c0, Val v :: e0, s, (c, e) :: r)
+  | (Apply :: c, e, Clo (c0, e0) :: s, r) -> (* partial application *)
+    execute (c0, e0, s, (c, e) :: r)
   | (Apply :: c, e, _, r) ->
     failwith "execute: cannot apply"
   | (Cur c' :: c, e, s, r) ->
