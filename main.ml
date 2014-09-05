@@ -15,6 +15,7 @@ let _ =
        printf "interpretation failure: %s\n" msg
     );
     let compiled = compile db_e in
-    run compiled;
+    let final_state = run compiled in
+    printf "final state:\n%s\n" (string_of_vm_state final_state)
   with Lexer.Eof ->
     exit 0
