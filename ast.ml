@@ -10,7 +10,7 @@ type const = True | False | Int of int
 type var = string
 
 (* variable with its De Bruijn index *)
-type db_var = string * int
+type db_var = int
 
 type bin_op = Plus | Minus | Mult | Div | And | Or
 
@@ -49,8 +49,8 @@ let const_of_bool = function
 let string_of_var name =
   name
 
-let string_of_db_var v i =
-  sprintf "(%s, %d)" v i
+let string_of_db_var =
+  string_of_int
 
 let string_of_bin_op = function
   | Plus  -> "+"
@@ -73,46 +73,34 @@ let rec string_of_expr (e: expr) = match e with
     "let " ^ (string_of_var v) ^ " = " ^ (string_of_expr init) ^ " in " ^
     (string_of_expr in_expr)
 
-
-
 (* return the DBI of var v *)
-(* FBR: simplifier *)
-let rec find_dbi (v: var) (vars: db_var list) = match vars with
-  | [] -> raise @@ Error ("find_dbi: cannot find: " ^ (string_of_var v))
-  | (u, i) :: rest ->
-    if u = v then i
-    else find_dbi v rest
-
-(* add a new variable into the DBI vars list *)
-let add_dbi (v: var) (vars: db_var list) =
-  (v, 0) ::
-  L.map
-    (fun (v', i) -> (v', i + 1))
-    vars
+let find_dbi (v: var) (vars: var list): int =
+  let rec loop i vs = match vs with
+    | [] -> raise @@ Error ("find_dbi: cannot find: " ^ (string_of_var v))
+    | u :: us -> if u = v then i else loop (i + 1) us
+  in
+  loop 0 vars
 
 (* transform an expression into an expression with De Bruijn indexes
-   let x = "a" in x -> 0
-   let x = "a" in (let y = "b" in x * y) -> 1 * 0 *)
-let rec dbi_indexes (vars: db_var list) (e: expr): db_expr = match e with
+   let x = a in x -> 0
+   let x = a in (let y = b in x * y) -> 1 * 0 *)
+let rec dbi_indexes (vars: var list) (e: expr): db_expr = match e with
   | Const c -> DB_const c
-  | Var v -> DB_var (v, find_dbi v vars)
+  | Var v -> DB_var (find_dbi v vars)
   | Bin_op (e1, op, e2) -> DB_bin_op (dbi_indexes vars e1,
                                       op,
                                       dbi_indexes vars e2)
   | Apply (e1, e2) -> DB_apply (dbi_indexes vars e1,
                                 dbi_indexes vars e2)
-  | Fun (v, e) -> let new_vars = add_dbi v vars in
-                  DB_fun ((v, 0),
-                          dbi_indexes new_vars e)
+  | Fun (v, e) -> DB_fun (0, dbi_indexes (v :: vars) e)
   | Let (v, init_expr, in_expr) ->
-    let new_vars = add_dbi v vars in
-    DB_let ((v, 0),
+    DB_let (0,
             dbi_indexes vars init_expr,
-            dbi_indexes new_vars in_expr)
+            dbi_indexes (v :: vars) in_expr)
 
 let rec string_of_db_expr (e: db_expr) = match e with
   | DB_const c -> string_of_const c
-  | DB_var (v, i) -> string_of_db_var v i
+  | DB_var i -> string_of_db_var i
   | DB_bin_op (e1, op, e2) ->
     (string_of_db_expr e1) ^ " " ^
     (string_of_bin_op op) ^ " " ^
@@ -185,7 +173,7 @@ let interpret (ex: db_expr): value =
   let rec loop (s: state) (e: db_expr): value = match e with
     | DB_const c -> Val_const c
     | DB_fun (v, e) -> Val_fun (v, e)
-    | DB_var (_v, i) -> lookup i s
+    | DB_var i -> lookup i s
     | DB_let (v, init_expr, in_expr) ->
       let new_v = loop s init_expr in
       loop (new_v :: s) in_expr
@@ -326,7 +314,7 @@ let rec compile (program: db_expr): instruction list =
     match prog with
     | DB_const c             -> (Push c) :: acc
     | DB_fun (_v, e)         -> (Cur (compile e)) :: acc
-    | DB_var (_v, i)         -> (Access i) :: acc
+    | DB_var i               -> (Access i) :: acc
     | DB_let (_v,
               init_expr,
               in_expr)       -> loop in_expr (Let :: (loop init_expr acc))
