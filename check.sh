@@ -32,3 +32,4 @@ echo "True  && False" | ./test
 echo "False && False" | ./test
 
 echo "let x = 111 in (fun y -> let z = 1 in x * y * z) 2" | ./test
+echo "let f = fun x -> (fun y -> x + y) in (f 3) 4" | ./test 
