@@ -297,7 +297,7 @@ let rec execute (cesr: vm_state) =
   | (Access n :: c, e, s, r) ->
     execute (c, e, (access n e) :: s, r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
-    execute (c0, Val v :: e0, Val v :: s, (c, e) :: r)
+    execute (c0, Val v :: e0, s, (c, e) :: r)
   | (Apply :: c, e, _, r) ->
     failwith "execute: cannot apply"
   | (Cur c' :: c, e, s, r) ->
