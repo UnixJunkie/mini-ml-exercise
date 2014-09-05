@@ -6,9 +6,10 @@ echo "toto" | ./test
 echo "True" | ./test
 echo "False" | ./test
 
+echo "let x = True in False" | ./test
+
 echo "1 * 2" | ./test
 echo "1 / 2" | ./test
-
 echo "1 + 1" | ./test
 echo "1 - 1" | ./test
 
@@ -16,6 +17,7 @@ echo "True && False" | ./test
 echo "True || False" | ./test
 echo "(fun x -> x) 1" | ./test
 echo "fun x -> x" | ./test
+echo "(fun x -> x) (fun x -> x)" | ./test
 echo "let x = 1 in x" | ./test
 echo "let x = 1 in x + 1" | ./test
 
