@@ -171,27 +171,20 @@ let apply op e1 e2 = match (type_const e1, type_const e2) with
 
 let interpret (ex: db_expr): value =
   let rec loop (s: state) (e: db_expr): value = match e with
-    | DB_const c -> Val_const c
-    | DB_fun (v, e) -> Val_fun (v, e)
-    | DB_var i -> lookup i s
+    | DB_const c                     -> Val_const c
+    | DB_fun (v, e)                  -> Val_fun (v, e)
+    | DB_var i                       -> lookup i s
     | DB_let (v, init_expr, in_expr) ->
       let new_v = loop s init_expr in
       loop (new_v :: s) in_expr
-    | DB_apply (e1, e2) ->
-      (match e1 with
-       | DB_fun (v, e') ->
-         (* FBR: this will have to be fixed so that we can do partial
-                 application of functions
-            e.g.  echo "let f = fun x -> (fun y -> x + y) in (f 3) 4" | ./test
-         *)
-         let param = loop s e2 in
-         loop (param :: s) e'
-       | _ -> raise @@ Error "interpret: only a function can be applied"
-      )
-    | DB_bin_op (e1, op, e2) ->
-      let v1 = loop s e1 in
-      let v2 = loop s e2 in
-      apply op v1 v2
+    | DB_apply (e1, e2)              ->
+      (let param = loop s e2 in
+       match e1 with
+       | DB_fun (_v, e') -> loop (param :: s) e'
+       (* FBR: really no idea of what to do here *)
+       | _ -> failwith "interpret: can only apply a function"
+      );
+    | DB_bin_op (e1, op, e2)         -> apply op (loop s e1) (loop s e2)
   in
   loop [] ex
 
@@ -272,41 +265,41 @@ let rec access i l =
   | [] -> failwith "access: empty list"
 
 let rec execute (cesr: vm_state) =
-  printf "%s\n" (string_of_vm_state cesr); (* debug trace *)
+  (* printf "%s\n" (string_of_vm_state cesr); (\* debug trace *\) *)
   match cesr with
   | ([], e, s, []) ->
     ([], e, s, [])
   | ([], e, s, (c0, e0) :: rs) ->
-    execute (c0, e0, s, rs)
+      execute (c0, e0, s, rs)
   | (Access n :: c, e, s, r) ->
-    execute (c, e, (access n e) :: s, r)
+      execute (c, e, (access n e) :: s, r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
-    execute (c0, Val v :: e0, s, (c, e) :: r)
+      execute (c0, Val v :: e0, s, (c, e) :: r)
   | (Apply :: c, e, Clo (c0, e0) :: s, r) -> (* partial application *)
-    execute (c0, e0, s, (c, e) :: r)
+      execute (c0, e0, s, (c, e) :: r)
   | (Apply :: c, e, _, r) -> failwith "execute: cannot apply"
   | (Cur c' :: c, e, s, r) ->
-    execute (c, e, Clo (c', e) :: s, r)
+      execute (c, e, Clo (c', e) :: s, r)
   | (Return :: c, e, s, (c0, e0) :: r) ->
-    execute (c0, e0, s, r)
+      execute (c0, e0, s, r)
   | (Return :: c, e, s, _) -> failwith "execute: cannot Return"
   | (Let :: c, e, v :: s, r) ->
-    execute (c, v :: e, s, r)
+      execute (c, v :: e, s, r)
   | (Let :: c, e, [], r) -> failwith "execute: cannot Let"
   | (Branch n :: c, e, s, r) ->
-    execute (skip n c, e, s, r)
+      execute (skip n c, e, s, r)
   | (Branchneg n :: c, e, Val True :: s, r) ->
-    execute (c, e, s, r) (* exec next instr *)
+      execute (c, e, s, r) (* exec next instr *)
   | (Branchneg n :: c, e, Val False :: s, r) ->
-    execute (skip n c, e, s, r) (* skip next n instr *)
+      execute (skip n c, e, s, r) (* skip next n instr *)
   | (Branchneg n :: c, e, _, r) -> failwith "execute: cannot branch"
   | (Op op :: c, e, Val v :: Val w :: s, r) ->
-    execute (c, e,
-             Val (const_of_value (apply op (Val_const v) (Val_const w))) :: s,
-             r)
+      execute (c, e,
+               Val (const_of_value (apply op (Val_const v) (Val_const w))) :: s,
+               r)
   | (Op op :: c, e, _, r) -> failwith "execute: cannot op"
   | (Push v :: c, e, s, r) ->
-    execute (c, e, Val v :: s, r)
+      execute (c, e, Val v :: s, r)
 
 (* the compiler *)
 let rec compile (program: db_expr): instruction list =
