@@ -257,7 +257,7 @@ type vm_state =
   closure list          (* call stack *)
 
 let string_of_vm_state ((c, e, s, r): vm_state): string =
-  "\n---\n" ^
+  "---\n" ^
   "code: "       ^ string_of_instructions c    ^ "\n" ^
   "env: "        ^ string_of_val_or_closures e ^ "\n" ^
   "exec_stack: " ^ string_of_val_or_closures s ^ "\n" ^
@@ -277,25 +277,31 @@ let skip n l =
 
 let rec access i l =
   if i < 0 then failwith (sprintf "access: negative index: %d" i);
-  if i = 0 then match l with
-    | x :: _ -> x
-    | [] -> failwith (sprintf "access: cannot access index: %d" i);
-  else
-    access (i - 1) l
+  match l with
+  | x :: xs -> if i = 0 then x else access (i - 1) xs
+  | [] -> failwith "access: empty list"
 
 let rec execute (cesr: vm_state) =
   printf "%s\n" (string_of_vm_state cesr); (* debug trace *)
+(*
+  (match cesr with
+   | (c :: cs, _, _, _) -> printf "instr: %s\n" (string_of_instruction c)
+   | _ -> ()
+  );
+*)
   match cesr with
-  (* FBR: we need to check that r is empty before stopping *)
-  | ([], e, s, r) -> ([], e, s, r)
+  | ([], e, s, []) ->
+    ([], e, s, [])
+  | ([], e, s, (c0, e0) :: rs) ->
+    execute (c0, e0, s, rs)
   | (Access n :: c, e, s, r) ->
     execute (c, e, (access n e) :: s, r)
   | (Apply :: c, e, Clo (c0, e0) :: Val v :: s, r) ->
-    execute (c0, Val v :: e0, s, (c, e) :: r)
+    execute (c0, Val v :: e0, Val v :: s, (c, e) :: r)
   | (Apply :: c, e, _, r) ->
     failwith "execute: cannot apply"
   | (Cur c' :: c, e, s, r) ->
-    execute (c, e, [Clo (c', e)], r)
+    execute (c, e, Clo (c', e) :: s, r)
   | (Return :: c, e, s, (c0, e0) :: r) ->
     execute (c0, e0, s, r)
   | (Return :: c, e, s, _) ->
@@ -331,7 +337,7 @@ let rec compile (program: db_expr): instruction list =
     | DB_var (_v, i) ->
       (Access i) :: acc
     | DB_let (_v, init_expr, in_expr) ->
-      loop in_expr (loop init_expr acc)
+      loop in_expr (Let :: (loop init_expr acc))
     | DB_apply (e1, e2) ->
       Apply :: loop e1 (loop e2 acc)
     | DB_bin_op (e1, op, e2) ->
