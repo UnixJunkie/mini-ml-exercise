@@ -1,0 +1,12 @@
+Name: mini-ml
+Version: 0.1
+Authors: Francois Berenger
+License: GPL
+Synopsis: Training exercise
+obuild-ver: 1
+
+Executable olex
+  oflags: -annot -w +27 -warn-error +8 -g
+  path: .
+  build-deps: str
+  main-is: test.ml
