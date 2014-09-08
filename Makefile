@@ -9,5 +9,9 @@ all:
 	ocamlc -c -annot main.ml
 	ocamlc -o test lexer.cmo parser.cmo ast.cmo main.cmo
 
+olex:
+	obuild configure
+	obuild build
+
 clean:
 	\rm -f *.mli *.cmi *.cmo *.annot test lexer.ml parser.ml
