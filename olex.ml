@@ -1,6 +1,10 @@
 
 (* my lexer in pure OCaml, lex is for wimps ;-) *)
 
+open Printf
+
+module L = List
+
 type token =
   | Int of int
   | False
@@ -21,19 +25,45 @@ type token =
   | Rparen
   | Eof
 
+let string_of_token = function
+  | Int i  -> sprintf "Int %d" i
+  | False  -> "False"
+  | True   -> "True"
+  | Arrow  -> "Arrow"
+  | Let    -> "Let"
+  | Fun    -> "Fun"
+  | Or     -> "Or"
+  | And    -> "And"
+  | In     -> "In"
+  | Var v  -> v
+  | Equal  -> "Equal"
+  | Plus   -> "Plus"
+  | Minus  -> "Minus"
+  | Mult   -> "Mult"
+  | Div    -> "Div"
+  | Lparen -> "Lparen"
+  | Rparen -> "Rparen"
+  | Eof    -> "Eof"
+                      
 (* is_blank : char -> bool *)
 let is_blank = function
   | ' ' | '\t' | '\n' -> true
-  | _ -> false
-
+  | _ -> false        
+                      
 let is_digit = function
-  | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> true
+  | '0'..'9' -> true
   | _ -> false
 
-(* cut the input string when one or several consecutive blanks are
-   encountered  *)
-let cleanup input_str =
-  failwith "not implemented yet"
+let is_lowcase_char = function
+  | 'a'..'z' -> true
+  | _ -> false
+
+(* prepare input for tokenization *)
+let preproc (input_str: string): string list =
+  (* surround one char keywords with spaces *)
+  let s = Str.global_replace (Str.regexp "[=+-*/()]") " \\0 " input_str in
+  (* split into keyword strings *)
+  Str.split (Str.regexp "[\n\t ]+") s
 
 let token_of_string = function
   | " " | "\t" | "\n" ->
@@ -48,22 +78,25 @@ let token_of_string = function
   | "False" -> False
   | "True" -> True
   | "->" -> Arrow
-  | "Let" -> Let
-  | "Fun" -> Fun
+  | "let" -> Let
+  | "fun" -> Fun
   | "||" -> Or
   | "&&" -> And
   | "in" -> In
   | int_or_var ->
     match String.length int_or_var with
     | 0 -> failwith "token_of_string: empty int_or_var"
-    | n ->
+    | _ ->
       let c = String.get int_or_var 0 in
       if is_digit c then
         (* we assume it's all digits *)
         Int (int_of_string int_or_var)
-      else
+      else if is_lowcase_char c then
         Var int_or_var
+      else
+        failwith ("token_of_string: neither int nor var: " ^ int_or_var)
 
-let rec tokenize (buffer: string list): token list =
-  (* FBR: add EOF at the end *)
-  failwith "not implemented yet"
+let tokenize (input: string): token list =
+  L.map token_of_string (preproc input)
+  @
+  [Eof]
