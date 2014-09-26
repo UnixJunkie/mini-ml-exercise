@@ -1,5 +1,5 @@
 
-(* my lexer in pure OCaml, lex is for wimps ;-) *)
+(* my lexer in pure OCaml, that's only OK for a very simple grammar *)
 
 open Printf
 
